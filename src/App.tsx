@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Onboarding } from "./components/Onboarding";
 import { CalendarView } from "./components/CalendarView";
@@ -79,7 +78,10 @@ export default function App() {
     setAppState((prev) => ({
       ...prev,
       profile,
-      pastMilestones: [...(prev.pastMilestones || []), ...initialPastMilestones],
+      pastMilestones: [
+        ...(prev.pastMilestones || []),
+        ...initialPastMilestones,
+      ],
       completedVaccinations: [
         ...(prev.completedVaccinations || []),
         ...initialCompletedVaccinations,
@@ -105,7 +107,11 @@ export default function App() {
 
       let updated;
       if (exists) updated = current.filter((v) => v.id !== id);
-      else updated = [...current, { id, date: date || format(new Date(), "yyyy-MM-dd") }];
+      else
+        updated = [
+          ...current,
+          { id, date: date || format(new Date(), "yyyy-MM-dd") },
+        ];
 
       return { ...prev, completedVaccinations: updated };
     });
@@ -116,15 +122,19 @@ export default function App() {
     if (!milestoneDef) return;
 
     setAppState((prev) => {
-      let nextEntries = { ...prev.entries };
-      const prevMilestoneRecord = prev.pastMilestones.find((m) => m.id === milestoneId);
+      const nextEntries = { ...prev.entries };
+      const prevMilestoneRecord = prev.pastMilestones.find(
+        (m) => m.id === milestoneId
+      );
 
       if (prevMilestoneRecord?.date) {
         const oldDate = prevMilestoneRecord.date;
         if (nextEntries[oldDate]) {
           nextEntries[oldDate] = {
             ...nextEntries[oldDate],
-            skills: nextEntries[oldDate].skills.filter((s) => s !== milestoneDef.title),
+            skills: nextEntries[oldDate].skills.filter(
+              (s) => s !== milestoneDef.title
+            ),
           };
         }
       }
@@ -150,10 +160,16 @@ export default function App() {
         }
       }
 
-      let nextPastMilestones = prev.pastMilestones.filter((m) => m.id !== milestoneId);
+      const nextPastMilestones = prev.pastMilestones.filter(
+        (m) => m.id !== milestoneId
+      );
       if (date !== null) nextPastMilestones.push({ id: milestoneId, date });
 
-      return { ...prev, entries: nextEntries, pastMilestones: nextPastMilestones };
+      return {
+        ...prev,
+        entries: nextEntries,
+        pastMilestones: nextPastMilestones,
+      };
     });
   };
 
@@ -163,7 +179,11 @@ export default function App() {
 
   // 로딩 전에는 깜빡임 방지용으로 간단 로더(혹은 스플래시)
   if (!isLoaded) {
-    return <div className="h-screen flex items-center justify-center text-gray-400">로딩중…</div>;
+    return (
+      <div className="h-screen flex items-center justify-center text-gray-400">
+        로딩중…
+      </div>
+    );
   }
 
   if (!appState.profile) {
@@ -173,40 +193,46 @@ export default function App() {
   // Helper to get all unique skills from history for DiaryEntry (still uses titles)
   const getAllRecordedSkills = (excludeDate?: string): string[] => {
     const skillsSet = new Set<string>();
-    
+
     // Add diary skills
     Object.values(appState.entries).forEach((entry: DiaryEntryType) => {
       if (excludeDate && entry.date === excludeDate) return;
       if (entry.skills) {
-        entry.skills.forEach(skill => skillsSet.add(skill));
+        entry.skills.forEach((skill) => skillsSet.add(skill));
       }
     });
 
     // Add past milestones (Titles)
     if (appState.pastMilestones) {
-        appState.pastMilestones.forEach(m => {
-            const milestone = MILESTONES.find(def => def.id === m.id);
-            if (milestone) skillsSet.add(milestone.title);
-        });
+      appState.pastMilestones.forEach((m) => {
+        const milestone = MILESTONES.find((def) => def.id === m.id);
+        if (milestone) skillsSet.add(milestone.title);
+      });
     }
 
     return Array.from(skillsSet);
   };
 
   // Helper to generate a unified map of Achieved Skills [ID -> { date, source }]
-  const getAchievedSkillsMap = (): Record<string, { date: string | null, source: 'diary' | 'manual' }> => {
-    const map: Record<string, { date: string | null, source: 'diary' | 'manual' }> = {};
-    
+  const getAchievedSkillsMap = (): Record<
+    string,
+    { date: string | null; source: "diary" | "manual" }
+  > => {
+    const map: Record<
+      string,
+      { date: string | null; source: "diary" | "manual" }
+    > = {};
+
     // 1. Process Diary Entries (Dates take precedence as they are context-rich)
     // Convert Title -> ID
     const sortedDates = Object.keys(appState.entries).sort();
-    sortedDates.forEach(date => {
+    sortedDates.forEach((date) => {
       const entry = appState.entries[date];
       if (entry.skills) {
-        entry.skills.forEach(skillTitle => {
-          const milestone = MILESTONES.find(m => m.title === skillTitle);
+        entry.skills.forEach((skillTitle) => {
+          const milestone = MILESTONES.find((m) => m.title === skillTitle);
           if (milestone && !map[milestone.id]) {
-            map[milestone.id] = { date: date, source: 'diary' };
+            map[milestone.id] = { date: date, source: "diary" };
           }
         });
       }
@@ -215,11 +241,11 @@ export default function App() {
     // 2. Process Past Milestones (Manually checked or Onboarding)
     // Only add if not already present from a diary entry
     if (appState.pastMilestones) {
-        appState.pastMilestones.forEach(m => {
-            if (!map[m.id]) {
-                map[m.id] = { date: m.date, source: 'manual' };
-            }
-        });
+      appState.pastMilestones.forEach((m) => {
+        if (!map[m.id]) {
+          map[m.id] = { date: m.date, source: "manual" };
+        }
+      });
     }
 
     return map;
@@ -231,11 +257,18 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'calendar':
-        return <CalendarView appState={appState} onDateClick={setSelectedDate} />;
-      case 'daily':
-        return <DailyView entries={appState.entries} onEntryClick={setSelectedDate} />;
-      case 'milestone':
+      case "calendar":
+        return (
+          <CalendarView appState={appState} onDateClick={setSelectedDate} />
+        );
+      case "daily":
+        return (
+          <DailyView
+            entries={appState.entries}
+            onEntryClick={setSelectedDate}
+          />
+        );
+      case "milestone":
         return (
           <MilestoneView
             currentMonthAge={getMonthDifference(appState.profile!.birthDate)}
@@ -244,7 +277,7 @@ export default function App() {
             onUpdateMilestone={updateMilestone}
           />
         );
-      case 'vaccination':
+      case "vaccination":
         return (
           <VaccinationView
             birthDate={appState.profile!.birthDate}
@@ -252,25 +285,35 @@ export default function App() {
             onToggleVaccination={toggleVaccination}
           />
         );
-      case 'settings':
-        return <SettingsView profile={appState.profile!} onUpdateProfile={updateProfile} />;
+      case "settings":
+        return (
+          <SettingsView
+            profile={appState.profile!}
+            onUpdateProfile={updateProfile}
+          />
+        );
       default:
-        return <CalendarView appState={appState} onDateClick={setSelectedDate} />;
+        return (
+          <CalendarView appState={appState} onDateClick={setSelectedDate} />
+        );
     }
   };
 
   return (
     <div className="h-full flex flex-col bg-gray-50 relative">
       {/* Top Bar - Show mostly everywhere except maybe full screen modal contexts, but good for context */}
-      <header className="bg-white px-6 pt-12 pb-4 flex items-center justify-between shadow-sm z-30">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            {appState.profile.name} <span className="text-primary text-xs bg-primary/10 px-2 py-1 rounded-full">{getDDay(appState.profile.birthDate)}</span>
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">{getAgeString(appState.profile.birthDate)}</p>
-        </div>
-        <div className="bg-gray-100 p-2 rounded-full text-gray-400">
-           <Baby size={24} />
+      <header className="bg-white px-6 pt-6 pb-4 flex items-center justify-between shadow-sm z-30">
+        <h1 className="text-xl font-bold text-gray-800 flex items-center">
+          <span className="text-primary">{appState.profile.name}</span>의
+          성장일기
+        </h1>
+        <div className="p-2 flex gap-2 items-center justify-center">
+          <p className="text-sm text-gray-400">
+            {getAgeString(appState.profile.birthDate)}
+          </p>
+          <span className="text-primary text-xs bg-primary/10 px-2 py-1 rounded-full">
+            {getDDay(appState.profile.birthDate)}
+          </span>
         </div>
       </header>
 
